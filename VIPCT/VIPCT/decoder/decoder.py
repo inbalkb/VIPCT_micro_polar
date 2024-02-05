@@ -177,12 +177,50 @@ class Decoder(nn.Module):
             ),
             torch.nn.Linear(512, 3*out_size))
 
+        elif type == 'FixCTv4_microphysics_seperated_w_score':
+
+            self.decoder0 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+                ),
+                torch.nn.Linear(512, 2*out_size),)
+            self.decoder1 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+            self.decoder2 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
 
     def forward(self, x):
         if self.average_cams:
             x = torch.mean(x,1)
         if self.feature_flatten:
             x = x.reshape(x.shape[0],-1)
+        if ('score' in self.type) and ('seperated' in self.type):
+            dec0_out = self.decoder0(x)
+            return torch.stack([dec0_out[:,0], torch.sigmoid(dec0_out[:,1]), self.decoder1(x).squeeze(), self.decoder2(x).squeeze()], dim=-1)
         if self.mask:
             x = self.decoder(x)
             return self.decoder_out(x), self.mask_decoder(x)

@@ -83,7 +83,8 @@ class SummaryWriter(object):
         }
         self.error_cbfn(kwargs)
 
-    def monitor_scatter_plot(self, est_param, gt_param, ind=0, dilute_percent=0.8, name='extinction'):
+    def monitor_scatter_plot(self, est_param, gt_param, ind=0, dilute_percent=0.8, name='extinction',
+                             colorbar_param = None, colorbar_name = None):
         """
         Monitor scatter plot of the parameters
 
@@ -105,6 +106,8 @@ class SummaryWriter(object):
             'gt_param': gt_param,
             'title': '{}_scatter_plot/{}-{}'.format(name,self._dataset,ind),
             'percent': dilute_percent,
+            'colorbar_param': colorbar_param,
+            'colorbar_name': colorbar_name
         }
         self.scatter_plot_cbfn(kwargs)
 
@@ -188,12 +191,19 @@ class SummaryWriter(object):
         gt_param = kwargs['gt_param'].cpu().detach().numpy().ravel()
         rho = np.corrcoef(est_param, gt_param)[1, 0]
         num_params = gt_param.size
-        rand_ind = np.unique(np.random.randint(0, num_params, int(kwargs['percent'] * num_params)))
+        rand_ind = np.random.choice(np.arange(num_params), size = int(kwargs['percent'] * num_params), replace = False)
         max_val = max(gt_param.max(), est_param.max())
         fig, ax = plt.subplots()
-        ax.set_title(r' ${:1.0f}\%$ randomly sampled; $\rho={:1.2f}$'.format(100 * kwargs['percent'], rho),
-                     fontsize=16)
-        ax.scatter(gt_param[rand_ind], est_param[rand_ind], facecolors='none', edgecolors='b')
+        if kwargs['colorbar_param'] is None:
+            ax.set_title(r' ${:1.0f}\%$ randomly sampled; $\rho={:1.2f}$'.format(100 * kwargs['percent'], rho),
+                         fontsize=16)
+            ax.scatter(gt_param[rand_ind], est_param[rand_ind], facecolors='none', edgecolors='b')
+        else:
+            ax.set_title(r' ${:1.0f}\%$ randomly sampled; $\rho={:1.2f}$; color-coded by {}'.format(100 * kwargs['percent'], rho, kwargs['colorbar_name']),
+                         fontsize=16)
+            colorbar_param = kwargs['colorbar_param'].cpu().detach().numpy().ravel()
+            scat = ax.scatter(gt_param[rand_ind], est_param[rand_ind], c=colorbar_param[rand_ind], cmap = plt.cm.jet)
+            plt.colorbar(scat)
         ax.set_xlim([0, 1.1*max_val])
         ax.set_ylim([0, 1.1*max_val])
         ax.plot(ax.get_xlim(), ax.get_ylim(), c='r', ls='--')
