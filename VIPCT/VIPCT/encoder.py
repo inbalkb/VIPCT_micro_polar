@@ -25,6 +25,9 @@ import torchvision
 from .util import nn_util as util
 from .roi_align import ROIAlign
 from .MyResNetFPN import resnet_fpn_backbone
+from .MyResNetWithEnv import resnet34_with_env_backbone
+
+
 class Backbone(nn.Module):
     """
     2D (Spatial/Pixel-aligned/local) image encoder
@@ -42,12 +45,13 @@ class Backbone(nn.Module):
             use_first_pool=True,
             norm_type="batch",
             sampling_output_size=8,
-            sampling_support = 8,
-            out_channels = 256,
-            in_channels = 1,
+            sampling_support=8,
+            out_channels=256,
+            in_channels=1,
             n_sampling_nets=1,
-            to_flatten = False,
-            modify_first_layer=True
+            to_flatten=False,
+            modify_first_layer=True,
+            env_params_num=0,
     ):
         """
         :param backbone Backbone network. Either custom, in which case
@@ -66,7 +70,7 @@ class Backbone(nn.Module):
         """
         super().__init__()
 
-        assert sampling_output_size>0
+        assert sampling_output_size > 0
         if norm_type != "batch":
             assert not pretrained
         self.sampling_support = sampling_support
@@ -75,7 +79,9 @@ class Backbone(nn.Module):
         self.use_first_pool = use_first_pool
         norm_layer = util.get_norm_layer(norm_type)
         self.num_layers = num_layers
+        self.env_params_num = env_params_num
         self.is_fpn = 'fpn' in backbone
+        self.is_env_in_backbone = 'env' in backbone
         if self.use_custom_resnet:
             print("WARNING: Custom encoder is experimental only")
             print("Using simple convolutional encoder")
@@ -83,22 +89,38 @@ class Backbone(nn.Module):
             self.latent_size = self.model.dims[-1]
         elif self.is_fpn:
             print("Using torchvision", backbone, "encoder")
-            extractor =  backbone.split('_')[0]
+            extractor = backbone.split('_')[0]
             self.model = resnet_fpn_backbone(backbone_name=extractor,
-                pretrained=pretrained, norm_layer=norm_layer, out_channels=out_channels, trainable_layers=5)
+                                             pretrained=pretrained, norm_layer=norm_layer, out_channels=out_channels,
+                                             trainable_layers=5)
             if modify_first_layer:
                 self.model.body.conv1 = nn.Conv2d(in_channels, self.model.body.conv1.out_channels, kernel_size=3,
-                                             stride=1, padding=1,
-                                             bias=self.model.body.conv1.bias != None)
+                                                  stride=1, padding=1,
+                                                  bias=self.model.body.conv1.bias != None)
                 self.samplers = [ROIAlign((sampling_output_size, sampling_output_size), 0.5 ** scale, 0) for scale in
                                  range(5)]
             else:
-                self.model.body.conv1 = nn.Conv2d(1, self.model.body.conv1.out_channels, kernel_size=self.model.body.conv1.kernel_size,
-                                             stride=self.model.body.conv1.stride, padding=self.model.body.conv1.padding,
-                                             bias=self.model.body.conv1.bias!=None)
+                self.model.body.conv1 = nn.Conv2d(in_channels, self.model.body.conv1.out_channels,
+                                                  kernel_size=self.model.body.conv1.kernel_size,
+                                                  stride=self.model.body.conv1.stride,
+                                                  padding=self.model.body.conv1.padding,
+                                                  bias=self.model.body.conv1.bias != None)
                 self.samplers = [ROIAlign((sampling_output_size, sampling_output_size), 0.5 ** scale, 0) for scale in
                                  range(5)]
             self.model.body.maxpool = nn.Sequential()
+        elif self.is_env_in_backbone:
+            assert self.env_params_num>0
+            print("Using torchvision", backbone, "encoder")
+
+            self.model = resnet34_with_env_backbone(in_channels=in_channels, in_env_channels=self.env_params_num,
+                                                    num_layers=num_layers, use_first_pool=self.use_first_pool)
+            if modify_first_layer:
+                self.model.conv1 = nn.Conv2d(in_channels, self.model.conv1.out_channels, kernel_size=3,
+                                                  stride=1, padding=1,
+                                                  bias=self.model.conv1.bias != None)
+            self.samplers = [ROIAlign((sampling_output_size, sampling_output_size), 0.5 ** scale, 0) for scale in
+                             range(5)]
+            self.model.maxpool = nn.Sequential()
 
         else:
             print("Using torchvision", backbone, "encoder")
@@ -106,17 +128,18 @@ class Backbone(nn.Module):
                 pretrained=pretrained, norm_layer=norm_layer
             )
             if modify_first_layer:
-                self.model.conv1 = nn.Conv2d(1, self.model.conv1.out_channels, kernel_size=3,
+                self.model.conv1 = nn.Conv2d(in_channels, self.model.conv1.out_channels, kernel_size=3,
                                              stride=1, padding=1,
-                                             bias=self.model.conv1.bias!=None)
+                                             bias=self.model.conv1.bias != None)
                 self.model.maxpool = nn.Sequential()
                 self.samplers = [ROIAlign((sampling_output_size, sampling_output_size), 0.5 ** scale, 0) for scale in
-                                 [0,0,1,2]]
+                                 [0, 0, 1, 2]]
 
             else:
-                self.model.conv1 = nn.Conv2d(1, self.model.conv1.out_channels, kernel_size=self.model.conv1.kernel_size,
+                self.model.conv1 = nn.Conv2d(in_channels, self.model.conv1.out_channels,
+                                             kernel_size=self.model.conv1.kernel_size,
                                              stride=self.model.conv1.stride, padding=self.model.conv1.padding,
-                                             bias=self.model.conv1.bias!=None)
+                                             bias=self.model.conv1.bias != None)
                 self.samplers = [ROIAlign((sampling_output_size, sampling_output_size), 0.5 ** scale, 0) for scale in
                                  range(1, 1 + self.num_layers)]
 
@@ -124,25 +147,26 @@ class Backbone(nn.Module):
             self.model.fc = nn.Sequential()
             self.model.avgpool = nn.Sequential()
         self.sampling_output_size = sampling_output_size
-        if backbone=='resnet34':
+        if 'resnet34' in backbone:
             self.latent_size = [0, 64, 128, 256, 512, 1024][num_layers]
-        elif backbone=='resnet50':
+        elif backbone == 'resnet50':
             self.latent_size = [0, 64, 320, 832, 1856][num_layers]
-        elif backbone=='resnet101':
+        elif backbone == 'resnet101':
             self.latent_size = [0, 64, 320, 832, 1856][num_layers]
-        elif backbone=='fasterrcnn_resnet50_fpn':
+        elif backbone == 'fasterrcnn_resnet50_fpn':
             self.latent_size = [0, 64, 320, 832, 1856][num_layers]
-        elif backbone=='resnet50_fpn':
-            self.latent_size = out_channels*4 # 256*5
+        elif backbone == 'resnet50_fpn':
+            self.latent_size = out_channels * 4  # 256*5
         else:
             NotImplementedError()
+
         self.index_interp = index_interp
         self.index_padding = index_padding
         self.upsample_interp = upsample_interp
         self.to_flatten = to_flatten
 
-        self.net = nn.Linear(sampling_output_size * sampling_output_size, 1, bias=True) if n_sampling_nets==1\
-            else Sampling_Weighting(sampling_output_size,n_sampling_nets)
+        self.net = nn.Linear(sampling_output_size * sampling_output_size, 1, bias=True) if n_sampling_nets == 1 \
+            else Sampling_Weighting(sampling_output_size, n_sampling_nets)
 
     def sample_roi(self, latents, box_centers):
         """
@@ -158,17 +182,17 @@ class Backbone(nn.Module):
         # uv /= m
         # uv -= 1
 
-        assert len(box_centers)==1
+        assert len(box_centers) == 1
         box_centers = box_centers[0]
         boxes = [self.make_boxes(box_center) for box_center in box_centers]
-        samples = torch.empty(0,device=latents[0].device)
+        samples = torch.empty(0, device=latents[0].device)
         for latent, sampler in zip(latents, self.samplers):
-            latent = latent.view(-1,*latent.shape[2:])
-            roi_features = sampler(latent,boxes)#.reshape(box_centers.shape[0],box_centers.shape[1],-1) #
-            samples = torch.cat((samples, roi_features),dim=1)
+            latent = latent.view(-1, *latent.shape[2:])
+            roi_features = sampler(latent, boxes)  # .reshape(box_centers.shape[0],box_centers.shape[1],-1) #
+            samples = torch.cat((samples, roi_features), dim=1)
 
-        samples = [torch.squeeze(self.net(samples.reshape(samples.shape[0],samples.shape[1],-1)),-1).reshape(*box_centers.shape[:2],-1)]
-
+        samples = [torch.squeeze(self.net(samples.reshape(samples.shape[0], samples.shape[1], -1)), -1).reshape(
+            *box_centers.shape[:2], -1)]
 
         # samples = [torch.squeeze(self.net(samples.reshape(samples.shape[0],samples.shape[1],-1)),-1)]
         # chuncks =  [box.shape[0] for box in boxes]
@@ -179,9 +203,9 @@ class Backbone(nn.Module):
         # else:
         #     samples = [sample.reshape(*box_center.shape[:-1], -1).transpose(0, 1) for
         #                sample, box_center in zip(samples, box_centers)]
-            # samples.splitreshape(*box_centers.shape[:-1],-1)
+        # samples.splitreshape(*box_centers.shape[:-1],-1)
         # samples = self.net(samples.reshape(samples.shape[0],samples.shape[1],-1)).reshape(*box_centers.shape[:-1],-1)
-        return samples #.transpose(2,3) # (B, Cams,points,features)
+        return samples  # .transpose(2,3) # (B, Cams,points,features)
 
     def sample_roi_debug(self, latents, box_centers):
         """
@@ -197,26 +221,28 @@ class Backbone(nn.Module):
         # uv /= m
         # uv -= 1
 
-        assert len(box_centers)==1
+        assert len(box_centers) == 1
         box_centers = box_centers[0]
         boxes = [self.make_boxes(box_center) for box_center in box_centers]
-        samples = torch.empty(0,device=latents[0].device)
+        samples = torch.empty(0, device=latents[0].device)
         for latent, sampler in zip(latents, self.samplers):
-            latent = latent.view(-1,*latent.shape[2:])
-            roi_features = sampler(latent,boxes)#.reshape(box_centers.shape[0],box_centers.shape[1],-1) #
-            samples = torch.cat((samples, roi_features),dim=1)
+            latent = latent.view(-1, *latent.shape[2:])
+            roi_features = sampler(latent, boxes)  # .reshape(box_centers.shape[0],box_centers.shape[1],-1) #
+            samples = torch.cat((samples, roi_features), dim=1)
 
-        samples = [torch.squeeze(samples.reshape(samples.shape[0],samples.shape[1],-1),-1).reshape(*box_centers.shape[:2],-1)]
+        samples = [
+            torch.squeeze(samples.reshape(samples.shape[0], samples.shape[1], -1), -1).reshape(*box_centers.shape[:2],
+                                                                                               -1)]
 
         return samples
 
     def make_boxes(self, box_centers):
-        d = (self.sampling_support-1) / 2
+        d = (self.sampling_support - 1) / 2
         x1y1 = box_centers - d
         x2y2 = box_centers + d
         # boxes = list(torch.cat((x1y1,x2y2),dim=-1).view(-1,box_centers.shape[-2],4))
         try:
-            boxes = torch.cat((x1y1,x2y2),dim=-1).view(-1,4)
+            boxes = torch.cat((x1y1, x2y2), dim=-1).view(-1, 4)
         except:
             print()
         return boxes
@@ -238,7 +264,7 @@ class Backbone(nn.Module):
         # uv -= 1
 
         uv = uv.unsqueeze(2)  # (B, N, 1, 2)
-        samples = torch.empty(0,device=uv.device)
+        samples = torch.empty(0, device=uv.device)
         for latent in latents:
             samples = torch.cat((samples, torch.squeeze(F.grid_sample(
                 latent,
@@ -246,9 +272,10 @@ class Backbone(nn.Module):
                 align_corners=True,
                 mode=self.index_interp,
                 padding_mode=self.index_padding,
-            ))),dim=1)
-        return samples # (Cams,cum_channels, N)
-    def forward(self, x):
+            ))), dim=1)
+        return samples  # (Cams,cum_channels, N)
+
+    def forward(self, x, env_params = None):
         """
         For extracting ResNet's features.
         :param x image (B, C, H, W)
@@ -259,7 +286,9 @@ class Backbone(nn.Module):
         if self.use_custom_resnet or self.is_fpn:
             latents = self.model(x)
             del latents['pool']
-            latents = [v for k,v in latents.items()]
+            latents = [v for k, v in latents.items()]
+        elif self.is_env_in_backbone:
+            latents = self.model(x, env_params)
         else:
             x = self.model.conv1(x)
             x = self.model.bn1(x)
@@ -284,6 +313,7 @@ class Backbone(nn.Module):
         self.latent_scaling = [(torch.tensor(latent.shape[-2:]) / input_size).to(device=x.device) for latent in latents]
         # return latent
         return latents
+
     @classmethod
     def from_cfg(cls, cfg):
         return cls(
@@ -297,11 +327,12 @@ class Backbone(nn.Module):
             use_first_pool=cfg.backbone.use_first_pool,
             sampling_output_size=cfg.backbone.sampling_output_size,
             sampling_support=cfg.backbone.sampling_support,
-            out_channels = cfg.backbone.out_channels,
-            in_channels = cfg.backbone.in_channels if hasattr(cfg.backbone,'in_channels') else 1,
-            n_sampling_nets = cfg.backbone.n_sampling_nets,
-            to_flatten = cfg.backbone.feature_flatten,
-            modify_first_layer = cfg.backbone.modify_first_layer
+            out_channels=cfg.backbone.out_channels,
+            in_channels=cfg.backbone.in_channels if hasattr(cfg.backbone, 'in_channels') else 1,
+            n_sampling_nets=cfg.backbone.n_sampling_nets,
+            to_flatten=cfg.backbone.feature_flatten,
+            modify_first_layer=cfg.backbone.modify_first_layer,
+            env_params_num=cfg.data.env_params_num,
         )
 
 
@@ -311,12 +342,12 @@ class ConvEncoder(nn.Module):
     """
 
     def __init__(
-        self,
-        dim_in=1,
-        norm_layer=util.get_norm_layer("group"),
-        padding_type="reflect",
-        use_leaky_relu=True,
-        use_skip_conn=True,
+            self,
+            dim_in=1,
+            norm_layer=util.get_norm_layer("group"),
+            padding_type="reflect",
+            use_leaky_relu=True,
+            use_skip_conn=True,
     ):
         super().__init__()
         self.dim_in = dim_in
@@ -397,20 +428,20 @@ class ConvEncoder(nn.Module):
 
 class Sampling_Weighting(nn.Module):
     def __init__(
-        self,
-        sampling_output_size=3,
-        n_sampling_nets=1,
+            self,
+            sampling_output_size=3,
+            n_sampling_nets=1,
     ):
         super(Sampling_Weighting, self).__init__()
         self.n_sampling_nets = n_sampling_nets
-        self.model = nn.ModuleList([nn.Linear(sampling_output_size * sampling_output_size, 1, bias=True)]*n_sampling_nets)
-
+        self.model = nn.ModuleList(
+            [nn.Linear(sampling_output_size * sampling_output_size, 1, bias=True)] * n_sampling_nets)
 
     def forward(self, x):
-        if self.n_sampling_nets==1:
+        if self.n_sampling_nets == 1:
             return self.model[0](x)
         else:
-            x = x.reshape(self.n_sampling_nets,-1,x.shape[-2],x.shape[-1])
-            x = [net(b) for b, net in zip(x,self.model)]
+            x = x.reshape(self.n_sampling_nets, -1, x.shape[-2], x.shape[-1])
+            x = [net(b) for b, net in zip(x, self.model)]
             x = torch.vstack(x)
             return x

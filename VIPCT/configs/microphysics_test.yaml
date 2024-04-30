@@ -1,0 +1,65 @@
+hydra:
+  run:
+    dir: /wdata_visl/inbalkom/NN_outputs/test/${now:%Y-%m-%d}/${now:%H-%M-%S}-BOMEX-pyshdom-nomask
+seed: 3
+debug: False
+gpu: 2
+save_results: True
+choose_thr_from_val_set: False
+show: False
+checkpoint_resume_path: "/wdata_visl/inbalkom/NN_outputs/2024-04-21/13-15-46-BOMEX-pyshdom-nomask/checkpoints/cp_270000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-03-03/20-57-21-BOMEX-PYSHDOM-Train0-nocloudbow-varsats-M/checkpoints/cp_290000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-10/14-26-30-BOMEX-PYSHDOM-Train0-nocloudbow-const/checkpoints/cp_270000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-10/14-26-30-BOMEX-PYSHDOM-Train0-nocloudbow-const/checkpoints/cp_300000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-23/18-22-51-BOMEX-AT3D-Train0-nocloudbow-varwind-sepenc/checkpoints/cp_240000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-23/18-21-26-BOMEX-AT3D-Train0-nocloudbow-varwind-noinput/checkpoints/cp_240000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-10/14-26-30-BOMEX-PYSHDOM-Train0-nocloudbow-const/checkpoints/cp_300000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-11/15-33-22-BOMEX-PYSHDOM-Train0-nocloudbow-varsun-sepenc/checkpoints/cp_590000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-03-10/14-26-30-BOMEX-PYSHDOM-Train0-nocloudbow-const/checkpoints/cp_300000.pth"
+  #'/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth'
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-02/01-47-37-CASS-PYSHDOM-Train0-nocloudbow/checkpoints/cp_240000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-03/20-57-21-BOMEX-PYSHDOM-Train0-nocloudbow-varsats-M/checkpoints/cp_290000.pth"
+  #'/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth'
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-02/12-33-36-CASS-BOMEX-PYSHDOM-Train0-nocloudbow/checkpoints/cp_300000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-02/01-47-37-CASS-PYSHDOM-Train0-nocloudbow/checkpoints/cp_150000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-03-02/12-33-36-CASS-BOMEX-PYSHDOM-Train0-nocloudbow/checkpoints/cp_90000.pth"
+  # '/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth'
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-09/00-15-25-BOMEX-AT3D-Train0-nocloudbow/checkpoints/cp_300000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-25/15-32-41-BOMEX-AT3D-Train1-nocloudbow-varsun-sep-enc/checkpoints/cp_300000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-25/15-28-39-BOMEX-AT3D-Train0-nocloudbow-varsun-sep-enc/checkpoints/cp_300000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-20/11-13-14-BOMEX-AT3D-Train0-nocloudbow-const-nomaskloss/checkpoints/cp_290000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-22/17-30-14-BOMEX-AT3D-Train0-withcloudbow-nomask/checkpoints/cp_200000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-19/17-12-28-BOMEX-AT3D-Train0-nocloudbow-united-separate-encoder-modloss/checkpoints/cp_400000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-20/11-13-14-BOMEX-AT3D-Train0-nocloudbow-const-nomaskloss/checkpoints/cp_290000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-17/09-51-14-BOMEX-AT3D-Train1-nocloudbow-united-try-lwc100_veffmask10/checkpoints/cp_400000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-17/09-51-14-BOMEX-AT3D-Train1-nocloudbow-united-try-lwcloss10/checkpoints/cp_170000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-16/16-33-19-BOMEX-AT3D-Train1-nocloudbow-united-try/checkpoints/cp_250000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-16/20-29-41-BOMEX-AT3D-Train1-nocloudbow-united-try-lwcloss10/checkpoints/cp_220000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-09/00-15-25-BOMEX-AT3D-Train0-nocloudbow/checkpoints/cp_300000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-14/12-29-43-BOMEX-AT3D-Train1-nocloudbow-varwind-in-separate-encoder/checkpoints/cp_50000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-14/12-29-43-BOMEX-AT3D-Train1-nocloudbow-varwind-in-separate-encoder/checkpoints/cp_300000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-02-13/15-06-26-BOMEX-AT3D-Train0-nocloudbow-varwind/checkpoints/cp_190000.pth"
+  #"/wdata_visl/inbalkom/NN_outputs/2024-02-14/12-29-43-BOMEX-AT3D-Train1-nocloudbow-varwind-in-separate-encoder/checkpoints/cp_30000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-14/22-35-53-BOMEX-AT3D-Train1-nocloudbow-varwind-noinput/checkpoints/cp_100000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-12/16-43-25-BOMEX-AT3D-Train0/checkpoints/cp_60000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-09/00-15-25-BOMEX-AT3D-Train0-nocloudbow/checkpoints/cp_150000.pth"
+  # "/wdata/inbalkom/NN_outputs/2024-02-06/09-54-31-BOMEX-AT3D-Train0/checkpoints/cp_150000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-09/00-00-30-BOMEX-AT3D-Train0/checkpoints/cp_160000.pth"
+  # "/wdata_visl/inbalkom/NN_outputs/2024-02-09/00-15-25-BOMEX-AT3D-Train0-nocloudbow/checkpoints/cp_300000.pth"
+  # '/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth'
+  # '/wdata/inbalkom/NN_outputs/2023-02-27/19-02-27/checkpoints/cp_310000.pth' '/wdata/inbalkom/NN_outputs/2023-02-27/18-06-35/checkpoints/cp_310000.pth' '/wdata/inbalkom/NN_outputs/2023-02-27/18-26-03/checkpoints/cp_380000.pth' # '/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth'
+data:
+  dataset_name: "BOMEX_500CCN_10cams_20m_polarization_pyshdom"  # "BOMEX_polarization_pyshdom_varying_M" #"BOMEX_pretty_clouds" #"BOMEX_500CCN_10cams_20m_polarization_at3d_varwind"
+  data_source: "pyshdom"
+  # "BOMEX_500CCN_10cams_20m_polarization_pyshdom" "BOMEX_polarization_pyshdom_varsun_scatIDA" "CASS_10cams_20m_polarization_pyshdom" #"BOMEX_polarization_pyshdom_varying_M" #"BOMEX_500CCN_10cams_20m_polarization_pyshdom" #"LES_pyshdom" #"CASS_10cams_20m_polarization_pyshdom" # "CASS_BOMEX_polarization_pyshdom" # "BOMEX_500CCN_10cams_20m_polarization_pyshdom" #'CASS_10cams_20m_polarization_pyshdom' #"BOMEX_500CCN_10cams_20m_polarization_pyshdom"
+  # "BOMEX_polarization_pyshdom_varsun" 'BOMEX_10cams_20m_polarization' # 'BOMEX_10cams_20m_polarization' 'BOMEX_50CCN' 'CASS_10cams_20m_polarization'
+  n_val: -1
+  n_cam: 10
+
+ct_net:
+  test_n_query: 500
+  test_mask_type: 'space_carving' # 'space_carving' 'gt_mask' None
+  query_point_test_method: 'all'
+
+min_mask_points: 30 # 30 for CASS_10cams_50m
+

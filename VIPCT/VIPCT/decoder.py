@@ -36,6 +36,8 @@ class Decoder(nn.Module):
             feature_flatten,
             latent_size,
             use_neighbours,
+            device,
+            multiply_factors = [1, 1, 1],
     ):
         """
         :param type Decoder network type.
@@ -45,6 +47,7 @@ class Decoder(nn.Module):
         self.feature_flatten = feature_flatten
         out_size = 27 if use_neighbours else 1
         self.type = type
+        self.device = device
         if type == 'FixCT':
             linear1 = torch.nn.Linear(latent_size, 2048)
             linear2 = torch.nn.Linear(2048, 512)
@@ -139,7 +142,186 @@ class Decoder(nn.Module):
                 input_skips=(5,),
 
             ),
-            torch.nn.Linear(512, 3*out_size))
+            torch.nn.Linear(512, 3*out_size),)
+            #torch.nn.Sigmoid(),
+            #Multiply(multiply_factors,device))
+
+        elif type == 'FixCTv4_microphysics_4out':
+
+            self.decoder = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+
+            ),
+            torch.nn.Linear(512, 4*out_size),)
+            #torch.nn.Sigmoid(),
+            #Multiply(multiply_factors,device))
+
+        elif type == 'FixCTv4_microphysics_seperated':
+
+            self.decoder0 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+            self.decoder1 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+            self.decoder2 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+
+        elif type == 'FixCTv4_microphysics_seperated_w_score':
+
+            self.decoder0 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+                ),
+                torch.nn.Linear(512, 2*out_size),)
+            self.decoder1 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+            self.decoder2 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),)
+
+        elif type == 'FixCTv4_microphysics_seperated_w_sigmoid':
+
+            self.decoder0 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),
+                torch.nn.Sigmoid(),
+                Multiply(multiply_factors[0],device))
+            self.decoder1 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),
+                torch.nn.Sigmoid(),
+                Multiply(multiply_factors[1], device))
+            self.decoder2 = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                    8,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                    512,
+                    input_skips=(5,),
+                ),
+                torch.nn.Linear(512, out_size),
+                torch.nn.Sigmoid(),
+                Multiply(multiply_factors[2], device))
+
+        elif type == 'FixCTv4_1micro':
+
+            self.decoder = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+            ),
+            torch.nn.Linear(512, out_size),
+            torch.nn.Sigmoid(),
+            Multiply(multiply_factors, device))
+
+        elif type == 'FixCTv4_1micro_2':
+
+            self.decoder = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+            ),
+            torch.nn.Linear(512, out_size),
+            torch.nn.Softplus())
+
+        elif type == 'FixCTv4_mask':
+
+            self.decoder = nn.Sequential(
+                torch.nn.Linear(latent_size, 2048),
+                torch.nn.ReLU(True),
+                MLPWithInputSkips2(
+                8,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                2048,  # self.harmonic_embedding.embedding_dim_xyz,
+                512,
+                input_skips=(5,),
+            ),
+            torch.nn.Linear(512, out_size),
+            torch.nn.Sigmoid(),)
 
 
     def forward(self, x):
@@ -147,14 +329,37 @@ class Decoder(nn.Module):
             x = torch.mean(x,1)
         if self.feature_flatten:
             x = x.reshape(x.shape[0],-1)
-        return self.decoder(x)
+        if 'score' in self.type:
+            dec0_out = self.decoder0(x)
+            return torch.stack([dec0_out[:,0], torch.sigmoid(dec0_out[:,1]), self.decoder1(x).squeeze(), self.decoder2(x).squeeze()], dim=-1)
+        elif 'seperated' in self.type:
+            return torch.stack([self.decoder0(x),self.decoder1(x),self.decoder2(x)],dim=-1).squeeze()
+        elif '4out' in self.type:
+            dec_out = self.decoder(x)
+            return torch.stack([dec_out[:, 0], torch.sigmoid(dec_out[:, 1]), dec_out[:, 2], dec_out[:, 3]],dim=-1)
+        else:
+            return self.decoder(x)
 
     @classmethod
     def from_cfg(cls, cfg, latent_size, use_neighbours=False):
+        if hasattr(cfg.decoder, 'out_factors'):
+            out_factors = cfg.decoder.out_factors
+        else:
+            out_factors = None
         return cls(
             type = cfg.decoder.name,
             average_cams=cfg.decoder.average_cams,
             feature_flatten=cfg.decoder.feature_flatten,
             latent_size = latent_size,
             use_neighbours = use_neighbours,
+            device=cfg.gpu,
+            multiply_factors = out_factors,
         )
+
+class Multiply(nn.Module):
+  def __init__(self,multiply_factors, device):
+    super(Multiply, self).__init__()
+    self.multiply_factors = torch.tensor(multiply_factors,device=device)
+  def forward(self, tensors):
+    result = self.multiply_factors*tensors
+    return result

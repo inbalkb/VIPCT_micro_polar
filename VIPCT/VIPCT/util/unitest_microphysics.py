@@ -58,40 +58,53 @@ if __name__ == "__main__":
             return samples  # (Cams,cum_channels, N)
 
 
-        with open('/wdata/roironen/Data/BOMEX_256x256x100_5000CCN_50m_micro_256/32cameras_20m/train/cloud_results_0.pkl', 'rb') as outfile:
-        #with open('/media/roironen/8AAE21F5AE21DB09/Data/CUBE.pkl', 'rb') as outfile:
+        # with open('/media/roironen/8AAE21F5AE21DB09/Data/BOMEX_256x256x100_5000CCN_50m_micro_256/32cameras/train/cloud_results_0.pkl', 'rb') as outfile:
+        # with open('/media/roironen/8AAE21F5AE21DB09/Data/CUBE.pkl', 'rb') as outfile:
+        # with open('/wdata_visl/inbalkom/NN_Data/BOMEX_256x256x100_5000CCN_50m_micro_256/CloudCT_SIMULATIONS_AT3D/const_env_params/train/cloud_results_1000.pkl','rb') as outfile:
+        #     x = pickle.load(outfile)
+        # with open('/wdata/inbalkom/NN_Data/BOMEX_256x256x100_5000CCN_50m_micro_256/new_clouds/train/cloud_results_1000.pkl','rb') as outfile:
+        #     x_gt = pickle.load(outfile)
+        # with open('/wdata_visl/inbalkom/NN_Data/BOMEX_256x256x100_5000CCN_50m_micro_256/CloudCT_SIMULATIONS_AT3D/varying_wind_const_sun/train/cloud_results_5004.pkl','rb') as outfile:
+        #     x = pickle.load(outfile)
+        with open('/wdata_visl/inbalkom/NN_Data/BOMEX_256x256x100_5000CCN_50m_micro_256/CloudCT_SIMULATIONS_PYSHDOM/var_sun/train/cloud_results_5004.pkl','rb') as outfile:
             x = pickle.load(outfile)
-        image_sizes = np.array([image.shape for image in x['images']])
+        with open('/wdata/inbalkom/NN_Data/BOMEX_256x256x100_5000CCN_50m_micro_256/new_clouds/train/cloud_results_5004.pkl','rb') as outfile:
+            x_gt = pickle.load(outfile)
+
+        images = x['images']
+        images_I = np.squeeze(images[:, 0, :, :])
+        image_sizes = np.array([image.shape for image in images_I])
         cameras = PerspectiveCameras(image_size=image_sizes[None], P=torch.tensor(x['cameras_P'],device='cuda').float(),
                                       device='cuda')
-        grid = torch.tensor(x['net_grid'],device='cuda')
-        grid = torch.tensor(x['grid'],device='cuda')
+        grid = x['grid']
 
-        extinction = x['ext'][None,None]
+        microphysics = np.array([x_gt['lwc_gt'],x_gt['reff_gt'],x_gt['veff_gt']])
         mask = x['mask'][None]
         # mask = [torch.tensor(m) if mask is not None else m for m in mask]
-        mask = [torch.ones(extinction.shape, device='cuda', dtype=bool)]
+        # mask = [torch.ones(grid.shape, device='cuda', dtype=bool)]
         layers = 4
         # images = [torch.arange(int(128/(i+1))**2).reshape(1,1,int(128/(i+1)),-1).double().repeat(image_sizes.shape[0],1,1,1) for i in range(layers)]
-        images = x['images']
-        volume = Volumes(torch.tensor(extinction, device='cuda').float(), grid)
 
-        backbone = Backbone(backbone='resnet50_fpn',
+        # volume = Volumes(torch.tensor(extinction, device='cuda').float(), grid)
+        volume = Volumes(torch.unsqueeze(torch.tensor(microphysics, device='cuda').float(),dim=0), grid)
+
+        backbone = Backbone(backbone='resnet34',
                 pretrained=False,
                 num_layers=4,
                 index_interp="bilinear",
-                index_padding="border",
+                index_padding="zeros",
                 upsample_interp="bilinear",
                 feature_scale=1.0,
                 use_first_pool=True,
                 norm_type="batch",
-                sampling_output_size=10,
-                sampling_support = 10,
-                out_channels = 1,
-                n_sampling_nets=1,
+                sampling_output_size=3,
+                sampling_support = 9,
+                out_channels = 128,
+                in_channels = 3,
+                n_sampling_nets=10,
                 to_flatten = False,
                 modify_first_layer=True).to('cuda')
-        volume, query_points, _ = volume.get_query_points(1000, 'topk', masks=mask)
+        volume, query_points, _ = volume.get_query_points_microphysics(100, 'topk', masks=mask)
         uv = cameras.project_points(query_points, screen=True)
         uv_swap= torch.zeros(uv[0].shape,device='cuda')
         uv_swap[..., 0] = uv[0][..., 1]
@@ -99,22 +112,23 @@ if __name__ == "__main__":
         uv_swap = [uv_swap]
 
         boxes = [backbone.make_boxes(box_center).reshape(*box_center.shape[:2],-1) for box_center in uv]
-        samples = backbone.sample_roi_debug([torch.tensor(images,device='cuda').unsqueeze(1).unsqueeze(1)],uv)
+        samples = backbone.sample_roi_debug([torch.tensor(images_I,device='cuda').unsqueeze(1).unsqueeze(1).float()],uv)
         # indices = torch.topk(torch.tensor(x['ext']).reshape(-1), 10).indices
         # print(torch.tensor(x['ext']).reshape(-1)[indices])
         # grid = x['grid']
         # volume = Volumes(torch.tensor(x['ext'])[None, None].double(), grid)
-        samples[0] = samples[0].reshape(32,1000,10,10)
+        samples[0] = samples[0].reshape(20,100,3,3)
         i=0
-        N=20
+        N=2
         pdf = matplotlib.backends.backend_pdf.PdfPages("output.pdf")
-        ind = np.random.permutation(1000)[:N]
+        ind = np.random.permutation(100)[:N]
         ind[0] = 0
-        for im, box, center in zip(images, boxes[0], uv[0]):
+        max_I = 0.18 #np.max(images_I)
+        for im, box, center in zip(images_I, boxes[0], uv[0]):
             fig, ax = plt.subplots(1)
             colors = cm.YlOrBr(np.linspace(0, 1, N))
 
-            plt.imshow(im / np.max(im))
+            plt.imshow(im, vmin=0, vmax=max_I)
             plt.scatter(center[ind, 0].cpu().numpy(), center[ind, 1].cpu().numpy(), s=1, c='red',
                         marker='x')
             # x = np.linspace(0, 115, 116)
@@ -138,7 +152,7 @@ if __name__ == "__main__":
                 # Ti = griddata((X, Y), im, np.array([centerx, centery]).reshape((1,2)), method='cubic')
                 rect = patches.Rectangle((centerx, centery), w, h, linewidth=1,
                                          edgecolor=c, facecolor="none")
-                plt.text(centerx+1, centery, f'{int(v)},{Ti:.3f}', fontsize=6,c =c)
+                #plt.text(centerx+1, centery, f'{int(v)},{Ti:.3f}', fontsize=6,c =c)
                 # Add the patch to the Axes
                 ax.add_patch(rect)
             plt.title(i)
@@ -147,10 +161,10 @@ if __name__ == "__main__":
             pdf.savefig(fig)
         pdf.close()
         samples = samples[0][:,ind]
-        pdf = matplotlib.backends.backend_pdf.PdfPages("output1.pdf")
+        #pdf = matplotlib.backends.backend_pdf.PdfPages("output1.pdf")
 
-        fig, axs = plt.subplots(32,N)
-        for im, sample, axx in zip(images, samples, axs):
+        fig, axs = plt.subplots(10,N)
+        for im, sample, axx in zip(images_I[:10], samples[:10], axs):
             for i, ax in enumerate(axx):
                 ax.imshow(sample.cpu().numpy()[i] / np.max(im))
                 ax.axis('off')

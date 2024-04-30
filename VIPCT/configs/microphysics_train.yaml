@@ -1,36 +1,41 @@
 hydra:
   run:
-    dir: ../outputs/${now:%Y-%m-%d}_Microphysics_BOMEX_Res50_FPN_128channels_Sampl_3_9_10cams_L2_relative_LR5.0e-05_nets10/${now:%H-%M-%S}
-#    dir: ../outputs/${now:%Y-%m-%d}_tmp/${now:%H-%M-%S}
+    dir: /wdata_visl/inbalkom/NN_outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}-BOMEX-AT3D-Train0
+#    dir: /home/inbalkom/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+comment: 'a'
 seed: 3
 debug: False
 resume: False
+env_training_image_encoder: False
+env_training_separate_encoder: False
 stats_print_interval: 25
 validation_iter_interval: 2500
-checkpoint_iteration_interval: 5000
-checkpoint_resume_path: ''#'/wdata/roironen/Deploy/VIPCT/outputs/2022-03-31_BOMEX_Res50_FPN_512channels_Sampl_3_9_10cams_L2_relative_LR5.0e-05_FixCTv4_wd1.0e-05_n_sampling_nets10/00-36-48/checkpoints/cp_130000.pth'
+checkpoint_iteration_interval: 10000
+checkpoint_resume_path: '' #"/wdata/inbalkom/NN_outputs/2024-02-06/09-54-31-BOMEX-AT3D-Train0/checkpoints/cp_150000.pth" #'/home/inbalkom/outputs/2023-02-16/19-08-03/checkpoints/cp_290000.pth' #''
 gpu: 0
 data:
-  dataset_name: 'BOMEX_10cams_polarization' # 'satellites_images' CASS_10cams
-#  image_size: [116, 116] # [height, width]
+  dataset_name: "BOMEX_500CCN_10cams_20m_polarization_at3d"  #"BOMEX_10cams_20m_polarization" #"CASS_10cams_20m_polarization"  # 'BOMEX_10cams_polarization' # 'satellites_images' CASS_10cams
   n_training: -1
-  n_val: 40
-  n_cam: 10
+  n_val: 100
+  percent_val: None
+  n_cam: 20
+  env_params_num: 0
   rand_cam: False
-  mean: [ 2.25938645e-02, -4.48392920e-04,  5.22222166e-04,  6.74791636e-02,
-        1.63417883e+01]
-  std: [1.05629171e-02, 1.02950760e-03, 1.51453089e-03, 4.76268498e-02,
-       4.93489710e+01]
+  image_size: None
+  mean: [ 0.02308033, -0.00048947,  0.00056993] # CASS 20 images: [0.02264, -1.1228e-4, -8.7111e-4], CASS 10 images: [0.02267, -1.3454e-4, -2.4774e-4], BOMEX 20 images: [ 0.02291389, -0.00048126,  0.00097344], BOMEX 10 images: [ 0.02308033, -0.00048947,  0.00056993]
+  std: [0.01007978, 0.00110006, 0.00160427] # CASS 20 images: [0.01183, 6.8126e-4, 1.74527e-3]. CASS 10 images: [0.01188, 7.4005e-4, 1.82997e-3], BOMEX 20 images: [0.01087034, 0.00099464, 0.00174394], BOMEX 10 images: [0.01007978, 0.00110006, 0.00160427]
 optimizer:
   max_epochs: 100000
-  lr: 5.0e-05
+  lr: 1.0e-05 #1e-8 #5.0e-05
   wd: 1.0e-05
   batch_size: 1
   iter_steps: [1000000000] #[120000, 300000]
   lr_scheduler_gamma: 0.1
-  lwc_loss: 'L2_relative_error' #'L1_relative_error'
-  droplet_loss: 'L2_relative_error'
+  loss: 'L2_relative_error_w_veff_w_score' #'L2_relative_error_w_veff' #'L2_relative_error_w_veff_w_score'
+  change_loss_interval: 200
 ct_net:
+  n_hidden_neurons_xyz: 64
+  n_hidden_neurons_dir: 64
   n_layers_xyz: 4
   n_layers_dir: 2
   append_xyz: [2]
@@ -45,7 +50,7 @@ ct_net:
   feature_encoding: False
   use_neighbours: False
 backbone:
-  name: 'resnet50_fpn' #'resnet34' fasterrcnn_resnet50_fpn
+  name: 'resnet34'  # 'resnet50_fpn' fasterrcnn_resnet50_fpn
   pretrained: False
   num_layers: 4
   index_interp: 'bilinear'
@@ -56,13 +61,14 @@ backbone:
   sampling_support: 3
   sampling_output_size: 9
   out_channels: 128
-  in_channels: 5
+  in_channels: 3
   n_sampling_nets: 10
   feature_flatten: False
   modify_first_layer: True
 decoder:
-  name: 'FixCTv4_microphysics' #'VIPCT' #'FixCT'
+  name: 'FixCTv4_microphysics_seperated_w_score' #'FixCTv4_microphysics_seperated' #'FixCTv4_microphysics_seperated_w_score' #'FixCTv4_microphysics_4out' #'VIPCT' #'FixCT' FixCTv4_microphysics_seperated_w_sigmoid
   average_cams: False
   feature_flatten: True
+  out_factors: [ 2.5, 15, 0.5 ]
 feature_encoder:
   n_harm: 3

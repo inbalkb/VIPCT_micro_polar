@@ -20,6 +20,7 @@
 
 import copy
 import torch
+import numpy as np
 from .util.types import Device, make_device
 from typing import List, Sequence, Tuple, Union
 
@@ -153,7 +154,9 @@ class Volumes:
         # TODO(dnovotny): Implement caching of the coordinate grid.
         grid_list = []
         for grid in self._grid:
-            grid_x, grid_y, grid_z = torch.meshgrid(torch.tensor(grid[0], device=self.device), torch.tensor(grid[1], device=self.device), torch.tensor(grid[2], device=self.device))
+            grid_x, grid_y, grid_z = torch.meshgrid(torch.tensor(np.float32(grid[0]), device=self.device),
+                                                    torch.tensor(np.float32(grid[1]), device=self.device),
+                                                    torch.tensor(np.float32(grid[2]), device=self.device))
             grid_list.append(torch.stack([grid_x.flatten(), grid_y.flatten(), grid_z.flatten()]).T)
         return torch.stack(grid_list)
 
